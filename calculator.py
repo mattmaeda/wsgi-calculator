@@ -40,18 +40,25 @@ To submit your homework:
 
 
 """
+def multiply(*args):
+    """ Returns a STRING with the product of the arguments """
+    return str(int(args[0]) * int(args[1]))
 
 
 def add(*args):
     """ Returns a STRING with the sum of the arguments """
+    return str(int(args[0]) + int(args[1]))
 
-    # TODO: Fill sum with the correct value, based on the
-    # args provided.
-    sum = "0"
 
-    return sum
+def subtract(*args):
+    """ Returns a STRING with the difference of the arguments """
+    return str(int(args[0]) - int(args[1]))
 
-# TODO: Add functions for handling more arithmetic operations.
+
+def divide(*args):
+    """ Returns a STRING with the quotient of the arguments """
+    return str(int(args[0])/int(args[1]))
+
 
 def resolve_path(path):
     """
@@ -59,26 +66,55 @@ def resolve_path(path):
     arguments.
     """
 
-    # TODO: Provide correct values for func and args. The
-    # examples provide the correct *syntax*, but you should
-    # determine the actual values of func and args using the
-    # path.
-    func = add
-    args = ['25', '32']
+    args = path.strip("/").split("/")
+    func = {
+        "multiply": multiply,
+        "add": add,
+        "subtract": subtract,
+        "divide": divide
+    }.get(args.pop(0))
 
     return func, args
 
+
 def application(environ, start_response):
-    # TODO: Your application code from the book database
-    # work here as well! Remember that your application must
-    # invoke start_response(status, headers) and also return
-    # the body of the response in BYTE encoding.
-    #
-    # TODO (bonus): Add error handling for a user attempting
-    # to divide by zero.
-    pass
+    """ Main calculator application """
+    try:
+        headers = [('Content-type', 'text/html')]
+        path = environ.get('PATH_INFO', None)
+
+        if path is None:
+            raise NameError
+
+        func, args = resolve_path(path)
+
+        if func is None:
+            raise TypeError
+
+        body = func(*args)
+        status = "200 OK"
+    except NameError:
+        status = "404 Not Found"
+        body = "<h1>Not Found</h1>"
+    except TypeError:
+        status = "404 Not Found"
+        body = "<h1>Not Found</h1>"
+    except ZeroDivisionError:
+        status = "200 OK"
+        body = "<h1>Cannot divide by zero</h1>"
+    except IndexError:
+        status = "200 OK"
+        body = "<h1>Operation expects at least 2 numbers.</h1>"
+    except Exception:
+        status = "500 Internal Server Error"
+        body = "<h1> Internal Server Error</h1>"
+    finally:
+        headers.append(('Content-length', str(len(body))))
+        start_response(status, headers)
+        return [body.encode('utf8')]
+
 
 if __name__ == '__main__':
-    # TODO: Insert the same boilerplate wsgiref simple
-    # server creation that you used in the book database.
-    pass
+    from wsgiref.simple_server import make_server
+    srv = make_server('localhost', 8080, application)
+    srv.serve_forever()
